@@ -2,32 +2,51 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
-    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs = {
     self,
     nixpkgs,
     rust-overlay,
-    flake-utils,
     ...
-  }:
-    flake-utils.lib.eachDefaultSystem (
-      system: let
-        overlays = [(import rust-overlay)];
-        pkgs = import nixpkgs {
-          inherit system overlays;
+  }: let
+    systems = [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
+    overlays = [(import rust-overlay)];
+    forEachSystem = nixpkgs.lib.genAttrs systems;
+    pkgsForEach = forEachSystem (system: import nixpkgs {inherit system overlays;});
+  in {
+    devShells = forEachSystem (system: let
+      pkgs = pkgsForEach.${system};
+    in {
+      default = pkgs.mkShell {
+        buildInputs = [
+          pkgs.rust-bin.stable.latest.default
+          pkgs.alejandra
+        ];
+      };
+    });
+    packages = forEachSystem (system: let
+      pkgs = pkgsForEach.${system};
+      cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+    in {
+      mdrop = pkgs.rustPlatform.buildRustPackage {
+        inherit (cargoToml.package) name version;
+
+        src = ./.;
+        cargoLock = {
+          lockFile = ./Cargo.lock;
         };
-      in
-        with pkgs; {
-          devShells.default = mkShell {
-            buildInputs = [
-              alejandra
-              openssl
-              pkg-config
-              rust-bin.stable.latest.default
-            ];
-          };
-        }
-    );
+
+        meta = with pkgs.lib; {
+          description = "Linux CLI tool for controlling Moondrop USB audio dongles.";
+          homepage = "https://github.com/frahz/mdrop";
+          license = licenses.mit;
+        };
+      };
+      default = self.packages.${system}.mdrop;
+    });
+  };
 }
