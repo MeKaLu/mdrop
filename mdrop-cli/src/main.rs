@@ -1,16 +1,13 @@
 use clap::{Args, Parser, Subcommand};
-use commands::MoondropCommand;
+use mdrop::commands::MoondropCommand;
+use mdrop::filter::Filter;
+use mdrop::gain::Gain;
+use mdrop::indicator_state::IndicatorState;
+use mdrop::{usb, volume_level};
 use rusb::Context;
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
 use tabled::Table;
-
-mod commands;
-mod filter;
-mod gain;
-mod indicator_state;
-mod usb;
-mod volume_level;
 
 #[derive(Debug, Parser)]
 #[command(name = "mdrop")]
@@ -20,7 +17,7 @@ struct Cli {
     command: Commands,
 
     /// specify target device, by using the USB bus number, to which the command should be directed, ex. `03:02`
-    #[arg(short = 's')]
+    #[arg(short = 's', global = true)]
     device: Option<String>,
 }
 
@@ -57,9 +54,9 @@ struct SetArgs {
 #[derive(Debug, Subcommand)]
 enum SetCommands {
     /// Sets audio filter
-    Filter { filter: filter::Filter },
+    Filter { filter: Filter },
     /// Sets gain on device to Low or High
-    Gain { gain: gain::Gain },
+    Gain { gain: Gain },
     /// Sets current hardware volume
     Volume {
         /// Volume level between 0 and 100
@@ -67,9 +64,7 @@ enum SetCommands {
         level: u8,
     },
     /// Sets indicator state to On, Off(temp), or Off
-    IndicatorState {
-        state: indicator_state::IndicatorState,
-    },
+    IndicatorState { state: IndicatorState },
 }
 
 fn main() {
@@ -79,6 +74,8 @@ fn main() {
         Ok(c) => c,
         Err(e) => panic!("could not initialize libusb: {}", e),
     };
+
+    println!("Device: {:?}", args.device);
 
     match args.command {
         Commands::Get(get) => {

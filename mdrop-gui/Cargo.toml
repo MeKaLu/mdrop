@@ -1,0 +1,13 @@
+[package]
+name = "mdrop-gui"
+version = "0.1.0"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+mdrop.workspace = true
+rusb.workspace = true
+usb-ids.workspace = true
+
+iced = { version = "0.13.1", features = ["svg"] }

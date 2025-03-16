@@ -23,17 +23,24 @@
   in {
     devShells = forEachSystem (system: let
       pkgs = pkgsForEach.${system};
+      libPath = with pkgs; lib.makeLibraryPath [
+        libGL
+        libxkbcommon
+        wayland
+      ];
     in {
       default = pkgs.mkShell {
         buildInputs = [
           pkgs.rust-bin.stable.latest.default
           pkgs.alejandra
         ];
+
+        LD_LIBRARY_PATH = libPath;
       };
     });
     packages = forEachSystem (system: let
       pkgs = pkgsForEach.${system};
-      cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+      cargoToml = builtins.fromTOML (builtins.readFile ./mdrop-cli/Cargo.toml);
     in {
       mdrop = pkgs.rustPlatform.buildRustPackage {
         inherit (cargoToml.package) name version;
@@ -42,6 +49,10 @@
         cargoLock = {
           lockFile = ./Cargo.lock;
         };
+        cargoFlags = [
+          "--bin"
+          "mdrop-cli"
+        ];
 
         meta = with pkgs.lib; {
           description = "Linux CLI tool for controlling Moondrop USB audio dongles.";
