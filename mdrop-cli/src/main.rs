@@ -1,10 +1,8 @@
 use clap::{Args, Parser, Subcommand};
-use mdrop::commands::MoondropCommand;
 use mdrop::filter::Filter;
 use mdrop::gain::Gain;
 use mdrop::indicator_state::IndicatorState;
-use mdrop::{usb, volume_level};
-use rusb::Context;
+use mdrop::{volume_level, Moondrop};
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
 use tabled::Table;
@@ -69,26 +67,22 @@ enum SetCommands {
 
 fn main() {
     let args = Cli::parse();
-
-    let mut context = match Context::new() {
-        Ok(c) => c,
-        Err(e) => panic!("could not initialize libusb: {}", e),
-    };
-
     println!("Device: {:?}", args.device);
+
+    let moondrop = Moondrop::new();
 
     match args.command {
         Commands::Get(get) => {
             let get_cmd = get.command.unwrap_or(GetCommands::All);
             match get_cmd {
                 GetCommands::All => {
-                    let resp = MoondropCommand::get_any(&mut context);
+                    let resp = moondrop.get_all();
                     println!("Filter: {:?}", resp.filter);
                     println!("Gain: {:?}", resp.gain);
                     println!("Indicator State: {:?}", resp.state);
                 }
                 GetCommands::Volume => {
-                    let volume = MoondropCommand::get_volume(&mut context);
+                    let volume = moondrop.get_volume();
                     println!(
                         "Volume: {}%",
                         volume_level::convert_volume_to_percent(volume)
@@ -97,38 +91,13 @@ fn main() {
             }
         }
         Commands::Set(set) => match set.command {
-            SetCommands::Filter { filter } => {
-                MoondropCommand::set_filter(&mut context, filter);
-            }
-            SetCommands::Gain { gain } => {
-                MoondropCommand::set_gain(&mut context, gain);
-            }
-            SetCommands::Volume { level } => {
-                MoondropCommand::set_volume(&mut context, level);
-            }
-            SetCommands::IndicatorState { state } => {
-                MoondropCommand::set_indicator_state(&mut context, state);
-            }
+            SetCommands::Filter { filter } => moondrop.set_filter(filter),
+            SetCommands::Gain { gain } => moondrop.set_gain(gain),
+            SetCommands::Volume { level } => moondrop.set_volume(level),
+            SetCommands::IndicatorState { state } => moondrop.set_indicator_state(state),
         },
         Commands::Devices => {
-            let dongles = usb::detect(&mut context);
-            // let dongles = vec![
-            //     DeviceInfo::new(
-            //         "Moondrop Dawn Pro".to_string(),
-            //         "03:02".to_string(),
-            //         "71%".to_string(),
-            //     ),
-            //     DeviceInfo::new(
-            //         "Moondrop Dawn 3.5mm".to_string(),
-            //         "02:01".to_string(),
-            //         "40%".to_string(),
-            //     ),
-            //     DeviceInfo::new(
-            //         "Moondrop Dawn 4.4mm".to_string(),
-            //         "04:04".to_string(),
-            //         "12%".to_string(),
-            //     ),
-            // ];
+            let dongles = moondrop.detect();
             if !dongles.is_empty() {
                 let table = Table::new(dongles)
                     .with(Style::sharp())

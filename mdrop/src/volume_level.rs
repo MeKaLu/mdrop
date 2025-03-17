@@ -1,5 +1,5 @@
-pub const VOLUME_MAX: u8 = 0x00;
-pub const VOLUME_MIN: u8 = 0x70;
+const VOLUME_MAX: u8 = 0x00;
+const VOLUME_MIN: u8 = 0x70;
 
 pub fn convert_volume_to_percent(value: u8) -> u32 {
     let val = value.clamp(VOLUME_MAX, VOLUME_MIN) as u32;
