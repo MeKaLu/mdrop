@@ -1953,7 +1953,6 @@ version = "0.1.0"
 dependencies = [
  "iced",
  "mdrop",
- "usb-ids",
 ]
 
 [[package]]

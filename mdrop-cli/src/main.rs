@@ -2,7 +2,8 @@ use clap::{Args, Parser, Subcommand};
 use mdrop::filter::Filter;
 use mdrop::gain::Gain;
 use mdrop::indicator_state::IndicatorState;
-use mdrop::{volume_level, Moondrop};
+use mdrop::volume::Volume;
+use mdrop::Moondrop;
 use tabled::settings::themes::ColumnNames;
 use tabled::settings::{Alignment, Style};
 use tabled::Table;
@@ -85,17 +86,14 @@ fn main() {
                 }
                 GetCommands::Volume => {
                     let volume = moondrop.get_volume();
-                    println!(
-                        "Volume: {}%",
-                        volume_level::convert_volume_to_percent(volume)
-                    );
+                    println!("Volume: {}", volume);
                 }
             }
         }
         Commands::Set(set) => match set.command {
             SetCommands::Filter { filter } => moondrop.set_filter(filter),
             SetCommands::Gain { gain } => moondrop.set_gain(gain),
-            SetCommands::Volume { level } => moondrop.set_volume(level),
+            SetCommands::Volume { level } => moondrop.set_volume(Volume::new(level)),
             SetCommands::IndicatorState { state } => moondrop.set_indicator_state(state),
         },
         Commands::Devices => {

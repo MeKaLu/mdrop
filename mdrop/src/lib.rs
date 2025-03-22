@@ -1,17 +1,19 @@
 use std::collections::HashMap;
 
-use filter::Filter;
 use futures_lite::future;
-use gain::Gain;
-use indicator_state::IndicatorState;
 use nusb::transfer::{ControlIn, ControlOut};
 use nusb::{DeviceId, DeviceInfo};
 use tabled::Tabled;
 
+use crate::filter::Filter;
+use crate::gain::Gain;
+use crate::indicator_state::IndicatorState;
+use crate::volume::Volume;
+
 pub mod filter;
 pub mod gain;
 pub mod indicator_state;
-pub mod volume_level;
+pub mod volume;
 
 pub const MOONDROP_VID: u16 = 0x2fc6;
 pub const DAWN_PRO_PID: u16 = 0xf06a;
@@ -66,28 +68,24 @@ impl Moondrop {
                     },
                 };
 
-                let vol = Self::read(di, &GET_VOLUME, 7)[VOLUME_IDX];
+                let vol_data = Self::read(di, &GET_VOLUME, 7)[VOLUME_IDX];
+                let vol = Volume::from_payload(vol_data);
                 let bus = format!("{:02}:{:02}", di.bus_number(), di.device_address());
                 let data = Self::read(di, &GET_ANY, 7);
-                MoondropInfo::new(
-                    name,
-                    bus,
-                    format!("{:02}%", volume_level::convert_volume_to_percent(vol)),
-                    &data,
-                )
+                MoondropInfo::new(name, bus, vol, &data)
             })
             .collect()
     }
 
-    pub fn get_volume(&self) -> u8 {
+    pub fn get_volume(&self) -> Volume {
         if let Some(id) = self.single {
             let di = self.devices.get(&id).expect("Hashmap should be populated");
             let data = Self::read(di, &GET_VOLUME, 7);
-            return data[VOLUME_IDX];
+            return Volume::from_payload(data[VOLUME_IDX]);
         }
 
         // TODO: fix
-        0
+        Volume::from_payload(0)
         // let data: &[u8] = &self
         //     .devices
         //     .iter()
@@ -109,15 +107,11 @@ impl Moondrop {
                 },
             };
 
-            let vol = Self::read(di, &GET_VOLUME, 7)[VOLUME_IDX];
+            let vol_data = Self::read(di, &GET_VOLUME, 7)[VOLUME_IDX];
+            let vol = Volume::from_payload(vol_data);
             let bus = format!("{:02}:{:02}", di.bus_number(), di.device_address());
             let data = Self::read(di, &GET_ANY, 7);
-            return MoondropInfo::new(
-                name,
-                bus,
-                format!("{:02}%", volume_level::convert_volume_to_percent(vol)),
-                &data,
-            );
+            return MoondropInfo::new(name, bus, vol, &data);
         }
 
         // TODO: fix
@@ -127,7 +121,7 @@ impl Moondrop {
             .take(1)
             .map(|(_, di)| Self::read(di, &GET_ANY, 7))
             .collect::<Vec<Vec<u8>>>()[0];
-        MoondropInfo::new("".into(), "".into(), "".into(), data)
+        MoondropInfo::new("".into(), "".into(), Volume::default(), data)
     }
 
     pub fn set_gain(&self, gain: Gain) {
@@ -139,8 +133,8 @@ impl Moondrop {
         });
     }
 
-    pub fn set_volume(&self, level: u8) {
-        let value = volume_level::convert_volume_to_payload(level);
+    pub fn set_volume(&self, level: Volume) {
+        let value = level.to_payload();
         println!("Volume Level: {level} clamped: {value}");
         let mut cmd = Vec::from(SET_VOLUME);
         // FIXME: might be incorrect
@@ -217,16 +211,16 @@ impl Default for Moondrop {
 #[derive(Tabled)]
 #[tabled(rename_all = "snake")]
 pub struct MoondropInfo {
-    name: String,
-    bus: String,
-    volume: String,
-    filter: Filter,
-    gain: Gain,
-    indicator_state: IndicatorState,
+    pub name: String,
+    pub bus: String,
+    pub volume: Volume,
+    pub filter: Filter,
+    pub gain: Gain,
+    pub indicator_state: IndicatorState,
 }
 
 impl MoondropInfo {
-    pub fn new(name: String, bus: String, volume: String, data: &[u8]) -> Self {
+    pub fn new(name: String, bus: String, volume: Volume, data: &[u8]) -> Self {
         let filter = Filter::from(data[FILTER_IDX]);
         let gain = Gain::from(data[GAIN_IDX]);
         let state = IndicatorState::from(data[INDICATOR_STATE_IDX]);
