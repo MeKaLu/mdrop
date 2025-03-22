@@ -36,16 +36,22 @@ const INDICATOR_STATE_IDX: usize = 5;
 
 pub struct Moondrop {
     devices: HashMap<DeviceId, DeviceInfo>,
+    single: Option<DeviceId>,
 }
 
 impl Moondrop {
     pub fn new() -> Self {
-        let devices = nusb::list_devices()
+        let devices: HashMap<DeviceId, DeviceInfo> = nusb::list_devices()
             .unwrap()
             .filter(|d| d.vendor_id() == MOONDROP_VID)
             .map(|d| (d.id(), d))
             .collect();
-        Self { devices }
+        let single = if devices.len() == 1 {
+            devices.keys().next().cloned()
+        } else {
+            None
+        };
+        Self { devices, single }
     }
 
     pub fn detect(&self) -> Vec<MoondropInfo> {
@@ -62,34 +68,66 @@ impl Moondrop {
 
                 let vol = Self::read(di, &GET_VOLUME, 7)[VOLUME_IDX];
                 let bus = format!("{:02}:{:02}", di.bus_number(), di.device_address());
+                let data = Self::read(di, &GET_ANY, 7);
                 MoondropInfo::new(
                     name,
                     bus,
                     format!("{:02}%", volume_level::convert_volume_to_percent(vol)),
+                    &data,
                 )
             })
             .collect()
     }
 
     pub fn get_volume(&self) -> u8 {
-        let data: &[u8] = &self
-            .devices
-            .iter()
-            .take(1)
-            .map(|(_, di)| Self::read(di, &GET_VOLUME, 7))
-            .collect::<Vec<Vec<u8>>>()[0];
+        if let Some(id) = self.single {
+            let di = self.devices.get(&id).expect("Hashmap should be populated");
+            let data = Self::read(di, &GET_VOLUME, 7);
+            return data[VOLUME_IDX];
+        }
 
-        data[VOLUME_IDX]
+        // TODO: fix
+        0
+        // let data: &[u8] = &self
+        //     .devices
+        //     .iter()
+        //     .take(1)
+        //     .map(|(_, di)| Self::read(di, &GET_VOLUME, 7))
+        //     .collect::<Vec<Vec<u8>>>()[0];
+        //
+        // data[VOLUME_IDX]
     }
 
-    pub fn get_all(&self) -> MoondropResponse {
+    pub fn get_all(&self) -> MoondropInfo {
+        if let Some(id) = self.single {
+            let di = self.devices.get(&id).expect("Hashmap should be populated");
+            let name = match di.product_string() {
+                Some(name) => name.to_string(),
+                None => match di.product_id() {
+                    DAWN_PRO_PID => "MOONDROP Dawn Pro".to_string(),
+                    _ => "Unknown".to_string(),
+                },
+            };
+
+            let vol = Self::read(di, &GET_VOLUME, 7)[VOLUME_IDX];
+            let bus = format!("{:02}:{:02}", di.bus_number(), di.device_address());
+            let data = Self::read(di, &GET_ANY, 7);
+            return MoondropInfo::new(
+                name,
+                bus,
+                format!("{:02}%", volume_level::convert_volume_to_percent(vol)),
+                &data,
+            );
+        }
+
+        // TODO: fix
         let data: &[u8] = &self
             .devices
             .iter()
             .take(1)
             .map(|(_, di)| Self::read(di, &GET_ANY, 7))
             .collect::<Vec<Vec<u8>>>()[0];
-        MoondropResponse::new(data)
+        MoondropInfo::new("".into(), "".into(), "".into(), data)
     }
 
     pub fn set_gain(&self, gain: Gain) {
@@ -176,35 +214,29 @@ impl Default for Moondrop {
     }
 }
 
-pub struct MoondropResponse {
-    pub filter: Filter,
-    pub gain: Gain,
-    pub state: IndicatorState,
-}
-
-impl MoondropResponse {
-    pub fn new(data: &[u8]) -> Self {
-        let filter = Filter::from(data[FILTER_IDX]);
-        let gain = Gain::from(data[GAIN_IDX]);
-        let state = IndicatorState::from(data[INDICATOR_STATE_IDX]);
-        Self {
-            filter,
-            gain,
-            state,
-        }
-    }
-}
-
 #[derive(Tabled)]
-#[tabled(rename_all = "pascal")]
+#[tabled(rename_all = "snake")]
 pub struct MoondropInfo {
     name: String,
     bus: String,
     volume: String,
+    filter: Filter,
+    gain: Gain,
+    indicator_state: IndicatorState,
 }
 
 impl MoondropInfo {
-    pub fn new(name: String, bus: String, volume: String) -> Self {
-        Self { name, bus, volume }
+    pub fn new(name: String, bus: String, volume: String, data: &[u8]) -> Self {
+        let filter = Filter::from(data[FILTER_IDX]);
+        let gain = Gain::from(data[GAIN_IDX]);
+        let state = IndicatorState::from(data[INDICATOR_STATE_IDX]);
+        Self {
+            name,
+            bus,
+            volume,
+            filter,
+            gain,
+            indicator_state: state,
+        }
     }
 }

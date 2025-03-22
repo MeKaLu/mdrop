@@ -3,7 +3,7 @@ use mdrop::filter::Filter;
 use mdrop::gain::Gain;
 use mdrop::indicator_state::IndicatorState;
 use mdrop::{volume_level, Moondrop};
-use tabled::settings::object::Columns;
+use tabled::settings::themes::ColumnNames;
 use tabled::settings::{Alignment, Style};
 use tabled::Table;
 
@@ -77,9 +77,11 @@ fn main() {
             match get_cmd {
                 GetCommands::All => {
                     let resp = moondrop.get_all();
-                    println!("Filter: {:?}", resp.filter);
-                    println!("Gain: {:?}", resp.gain);
-                    println!("Indicator State: {:?}", resp.state);
+                    let table = Table::new([resp])
+                        .with(Style::sharp().remove_horizontals())
+                        .with(ColumnNames::default().alignment(Alignment::center()))
+                        .to_string();
+                    println!("{table}");
                 }
                 GetCommands::Volume => {
                     let volume = moondrop.get_volume();
@@ -100,8 +102,8 @@ fn main() {
             let dongles = moondrop.detect();
             if !dongles.is_empty() {
                 let table = Table::new(dongles)
-                    .with(Style::sharp())
-                    .modify(Columns::last(), Alignment::right())
+                    .with(Style::sharp().remove_horizontals())
+                    .with(ColumnNames::default().alignment(Alignment::center()))
                     .to_string();
                 println!("{table}");
             } else {
