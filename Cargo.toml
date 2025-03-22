@@ -9,7 +9,7 @@ resolver = "2"
 [workspace.package]
 authors = [ "frahz <me@frahz.dev>" ]
 license = "MIT"
-edition = "2021"
+edition = "2024"
 
 [workspace.dependencies]
 mdrop = { path = "mdrop" }

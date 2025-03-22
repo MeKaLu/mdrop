@@ -6,7 +6,7 @@ use mdrop::indicator_state::IndicatorState;
 use mdrop::volume::Volume;
 use mdrop::Moondrop;
 
-const WIDTH: u16 = 300;
+const WIDTH: u32 = 300;
 
 pub fn main() -> iced::Result {
     iced::application("mdrop", MdropGui::update, MdropGui::view)
