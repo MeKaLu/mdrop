@@ -1,15 +1,20 @@
 use iced::widget::{column, container, pick_list, slider, text};
-use iced::{Center, Element, Fill, Theme};
+use iced::{Center, Element, Fill, Size, Theme};
 use mdrop::filter::Filter;
 use mdrop::gain::Gain;
 use mdrop::indicator_state::IndicatorState;
 use mdrop::volume::Volume;
-use mdrop::Moondrop;
+use mdrop::{Moondrop, MoondropInfo};
 
 const WIDTH: u32 = 300;
 
 pub fn main() -> iced::Result {
     iced::application("mdrop", MdropGui::update, MdropGui::view)
+        .window(iced::window::Settings {
+            size: Size::new(300.0, 300.0),
+            min_size: Some(Size::new(300.0, 300.0)),
+            ..Default::default()
+        })
         .theme(|_| Theme::CatppuccinMocha)
         // .run_with(move || MdropGui::new())
         .run()
@@ -18,7 +23,7 @@ pub fn main() -> iced::Result {
 #[derive(Debug, Clone)]
 pub enum Message {
     SetVolume,
-    VolumeChanged(u8),
+    VolumeChanged(u32),
     SelectFilter(Filter),
     SelectIndicator(IndicatorState),
     SelectGain(Gain),
@@ -26,58 +31,59 @@ pub enum Message {
 
 pub struct MdropGui {
     moondrop: Moondrop,
-    volume: Volume,
-    filter: Filter,
-    indicator_state: IndicatorState,
-    gain: Gain,
+    info: MoondropInfo,
 }
 
 impl MdropGui {
-
     fn update(&mut self, message: Message) {
         match message {
             Message::SetVolume => {
-                println!("final: {}", self.volume);
+                println!("final: {}", self.info.volume);
             }
             Message::VolumeChanged(value) => {
-                self.volume = Volume::new(value);
+                self.info.volume = Volume::new(value);
             }
             Message::SelectFilter(filter) => {
-                self.filter = filter;
+                self.info.filter = filter;
                 self.moondrop.set_filter(filter);
             }
             Message::SelectIndicator(indicator_state) => {
-                self.indicator_state = indicator_state;
+                self.info.indicator_state = indicator_state;
                 self.moondrop.set_indicator_state(indicator_state);
             }
             Message::SelectGain(gain) => {
-                self.gain = gain;
+                self.info.gain = gain;
                 self.moondrop.set_gain(gain);
             }
         }
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let filter_list =
-            pick_list(&Filter::ALL[..], Some(self.filter), Message::SelectFilter).width(WIDTH);
+        let name = text(&self.info.name);
+
+        let filter_list = pick_list(
+            &Filter::ALL[..],
+            Some(self.info.filter),
+            Message::SelectFilter,
+        )
+        .width(WIDTH);
         let gain_list =
-            pick_list(&Gain::ALL[..], Some(self.gain), Message::SelectGain).width(WIDTH);
+            pick_list(&Gain::ALL[..], Some(self.info.gain), Message::SelectGain).width(WIDTH);
         let indicator_list = pick_list(
             &IndicatorState::ALL[..],
-            Some(self.indicator_state),
+            Some(self.info.indicator_state),
             Message::SelectIndicator,
         )
         .width(WIDTH);
         let h_slider = container(
-            slider(1..=100, self.volume.inner() as u8, Message::VolumeChanged)
-                .on_release(Message::SetVolume)
-                .shift_step(5),
+            slider(1..=100, self.info.volume.inner(), Message::VolumeChanged)
+                .on_release(Message::SetVolume), // .shift_step(1),
         )
         .width(WIDTH);
 
-        let text = text(self.volume.inner());
+        let text = text(self.info.volume.inner());
 
-        column![gain_list, indicator_list, filter_list, h_slider, text,]
+        column![name, gain_list, indicator_list, filter_list, h_slider, text,]
             .width(Fill)
             .align_x(Center)
             .spacing(20)
@@ -90,12 +96,6 @@ impl Default for MdropGui {
     fn default() -> Self {
         let moondrop = Moondrop::new();
         let info = moondrop.get_all();
-        Self {
-            moondrop,
-            volume: info.volume,
-            filter: info.filter,
-            gain: info.gain,
-            indicator_state: info.indicator_state,
-        }
+        Self { moondrop, info }
     }
 }

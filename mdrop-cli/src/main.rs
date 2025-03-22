@@ -59,8 +59,8 @@ enum SetCommands {
     /// Sets current hardware volume
     Volume {
         /// Volume level between 0 and 100
-        #[arg(value_parser = clap::value_parser!(u8).range(0..=100))]
-        level: u8,
+        #[arg(value_parser = clap::value_parser!(u32).range(0..=100))]
+        level: u32,
     },
     /// Sets indicator state to On, Off(temp), or Off
     IndicatorState { state: IndicatorState },

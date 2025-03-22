@@ -8,8 +8,8 @@ const VOLUME_MIN: u8 = 0x70;
 pub struct Volume(u32);
 
 impl Volume {
-    pub fn new(level: u8) -> Self {
-        Self(level as u32)
+    pub fn new(level: u32) -> Self {
+        Self(level)
     }
     pub fn to_payload(&self) -> u8 {
         let v = (VOLUME_MIN as u32 - self.0 * VOLUME_MIN as u32 / 100) as u8 - 1;
