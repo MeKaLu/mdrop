@@ -96,7 +96,7 @@ impl Moondrop {
         // data[VOLUME_IDX]
     }
 
-    pub fn get_all(&self) -> MoondropInfo {
+    pub fn get_all(&self) -> Option<MoondropInfo> {
         if let Some(id) = self.single {
             let di = self.devices.get(&id).expect("Hashmap should be populated");
             let name = match di.product_string() {
@@ -111,17 +111,11 @@ impl Moondrop {
             let vol = Volume::from_payload(vol_data);
             let bus = format!("{:02}:{:02}", di.bus_number(), di.device_address());
             let data = Self::read(di, &GET_ANY, 7);
-            return MoondropInfo::new(name, bus, vol, &data);
+            return Some(MoondropInfo::new(name, bus, vol, &data));
         }
 
-        // TODO: fix
-        let data: &[u8] = &self
-            .devices
-            .iter()
-            .take(1)
-            .map(|(_, di)| Self::read(di, &GET_ANY, 7))
-            .collect::<Vec<Vec<u8>>>()[0];
-        MoondropInfo::new("".into(), "".into(), Volume::default(), data)
+        None
+
     }
 
     pub fn set_gain(&self, gain: Gain) {

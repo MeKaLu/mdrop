@@ -1,12 +1,12 @@
 use clap::{Args, Parser, Subcommand};
+use mdrop::Moondrop;
 use mdrop::filter::Filter;
 use mdrop::gain::Gain;
 use mdrop::indicator_state::IndicatorState;
 use mdrop::volume::Volume;
-use mdrop::Moondrop;
+use tabled::Table;
 use tabled::settings::themes::ColumnNames;
 use tabled::settings::{Alignment, Style};
-use tabled::Table;
 
 #[derive(Debug, Parser)]
 #[command(name = "mdrop")]
@@ -78,11 +78,16 @@ fn main() {
             match get_cmd {
                 GetCommands::All => {
                     let resp = moondrop.get_all();
-                    let table = Table::new([resp])
-                        .with(Style::sharp().remove_horizontals())
-                        .with(ColumnNames::default().alignment(Alignment::center()))
-                        .to_string();
-                    println!("{table}");
+                    match resp {
+                        Some(dongle) => {
+                            let table = Table::new([dongle])
+                                .with(Style::sharp().remove_horizontals())
+                                .with(ColumnNames::default().alignment(Alignment::center()))
+                                .to_string();
+                            println!("{table}");
+                        }
+                        None => println!("No Moondrop dongle connected."),
+                    }
                 }
                 GetCommands::Volume => {
                     let volume = moondrop.get_volume();

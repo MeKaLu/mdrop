@@ -1,4 +1,4 @@
-use iced::widget::{column, container, pick_list, slider, text};
+use iced::widget::{column, container, pick_list, slider, svg, text};
 use iced::{Center, Element, Fill, Size, Theme};
 use mdrop::filter::Filter;
 use mdrop::gain::Gain;
@@ -31,64 +31,90 @@ pub enum Message {
 
 pub struct MdropGui {
     moondrop: Moondrop,
-    info: MoondropInfo,
+    info: Option<MoondropInfo>,
 }
 
 impl MdropGui {
     fn update(&mut self, message: Message) {
         match message {
             Message::SetVolume => {
-                println!("final: {}", self.info.volume);
+                if let Some(info) = self.info.as_ref() {
+                    self.moondrop.set_volume(info.volume);
+                }
             }
             Message::VolumeChanged(value) => {
-                self.info.volume = Volume::new(value);
+                if let Some(info) = self.info.as_mut() {
+                    info.volume = Volume::new(value);
+                }
             }
             Message::SelectFilter(filter) => {
-                self.info.filter = filter;
-                self.moondrop.set_filter(filter);
+                if let Some(info) = self.info.as_mut() {
+                    info.filter = filter;
+                    self.moondrop.set_filter(filter);
+                }
             }
             Message::SelectIndicator(indicator_state) => {
-                self.info.indicator_state = indicator_state;
-                self.moondrop.set_indicator_state(indicator_state);
+                if let Some(info) = self.info.as_mut() {
+                    info.indicator_state = indicator_state;
+                    self.moondrop.set_indicator_state(indicator_state);
+                }
             }
             Message::SelectGain(gain) => {
-                self.info.gain = gain;
-                self.moondrop.set_gain(gain);
+                if let Some(info) = self.info.as_mut() {
+                    info.gain = gain;
+                    self.moondrop.set_gain(gain);
+                }
             }
         }
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let name = text(&self.info.name);
+        match &self.info {
+            Some(info) => {
+                let name = text(&info.name);
 
-        let filter_list = pick_list(
-            &Filter::ALL[..],
-            Some(self.info.filter),
-            Message::SelectFilter,
-        )
-        .width(WIDTH);
-        let gain_list =
-            pick_list(&Gain::ALL[..], Some(self.info.gain), Message::SelectGain).width(WIDTH);
-        let indicator_list = pick_list(
-            &IndicatorState::ALL[..],
-            Some(self.info.indicator_state),
-            Message::SelectIndicator,
-        )
-        .width(WIDTH);
-        let h_slider = container(
-            slider(1..=100, self.info.volume.inner(), Message::VolumeChanged)
-                .on_release(Message::SetVolume), // .shift_step(1),
-        )
-        .width(WIDTH);
+                let filter_list =
+                    pick_list(&Filter::ALL[..], Some(info.filter), Message::SelectFilter)
+                        .width(WIDTH);
+                let gain_list =
+                    pick_list(&Gain::ALL[..], Some(info.gain), Message::SelectGain).width(WIDTH);
+                let indicator_list = pick_list(
+                    &IndicatorState::ALL[..],
+                    Some(info.indicator_state),
+                    Message::SelectIndicator,
+                )
+                .width(WIDTH);
+                let h_slider = container(
+                    slider(1..=100, info.volume.inner(), Message::VolumeChanged)
+                        .on_release(Message::SetVolume), // .shift_step(1),
+                )
+                .width(WIDTH);
 
-        let text = text(self.info.volume.inner());
+                let text = text(info.volume.inner());
 
-        column![name, gain_list, indicator_list, filter_list, h_slider, text,]
-            .width(Fill)
-            .align_x(Center)
-            .spacing(20)
-            .padding(20)
-            .into()
+                column![name, gain_list, indicator_list, filter_list, h_slider, text,]
+                    .width(Fill)
+                    .align_x(Center)
+                    .spacing(20)
+                    .padding(20)
+                    .into()
+            }
+            None => {
+                let handle = svg::Handle::from_memory(include_bytes!("../res/dongle.svg"));
+                let svg = svg(handle)
+                    .width(Fill)
+                    .style(|theme: &Theme, _| svg::Style {
+                        color: Some(theme.palette().text),
+                    });
+                let text = text("No Moondrop dongle detected.\nPlease attach dongle").center();
+                column![svg, text,]
+                    .width(Fill)
+                    .align_x(Center)
+                    .spacing(20)
+                    .padding(20)
+                    .into()
+            }
+        }
     }
 }
 
