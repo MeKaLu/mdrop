@@ -95,7 +95,8 @@ impl MdropGui {
                 .width(WIDTH);
                 let h_slider = container(
                     slider(1..=100, info.volume.inner(), Message::VolumeChanged)
-                        .on_release(Message::SetVolume), // .shift_step(1),
+                        .on_release(Message::SetVolume)
+                        .shift_step(5u32),
                 )
                 .width(WIDTH);
 
