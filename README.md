@@ -29,6 +29,9 @@ $ mdrop devices
 └───────────────────┴───────┴──────┴────────────────────────────┴──────┴───────────────┘
 ```
 
+![image](https://github.com/user-attachments/assets/30fdb3ac-fd8a-440c-a7a0-d31f74788fda)
+
+
 ## Supported devices
 
 - Moondrop Dawn Pro
