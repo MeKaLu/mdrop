@@ -1,5 +1,9 @@
+use std::collections::HashMap;
+
+use iced::futures::channel::mpsc;
+use iced::futures::{SinkExt, Stream};
 use iced::widget::{column, container, pick_list, slider, svg, text};
-use iced::{Center, Element, Fill, Size, Theme};
+use iced::{Center, Element, Fill, Size, Subscription, Theme, stream};
 use mdrop::filter::Filter;
 use mdrop::gain::Gain;
 use mdrop::indicator_state::IndicatorState;
@@ -15,8 +19,8 @@ pub fn main() -> iced::Result {
             min_size: Some(Size::new(300.0, 300.0)),
             ..Default::default()
         })
-        .theme(|_| Theme::CatppuccinMocha)
-        // .run_with(move || MdropGui::new())
+        .subscription(MdropGui::subscription)
+        .theme(MdropGui::theme)
         .run()
 }
 
@@ -27,6 +31,7 @@ pub enum Message {
     SelectFilter(Filter),
     SelectIndicator(IndicatorState),
     SelectGain(Gain),
+    UpdateDevice(Option<MoondropInfo>),
 }
 
 pub struct MdropGui {
@@ -65,10 +70,14 @@ impl MdropGui {
                     self.moondrop.set_gain(gain);
                 }
             }
+            Message::UpdateDevice(moondrop_info) => {
+                println!("app update: {:?}", moondrop_info);
+                self.info = moondrop_info;
+            }
         }
     }
 
-    fn view(&self) -> Element<'_, Message> {
+    fn view(&self) -> Element<Message> {
         match &self.info {
             Some(info) => {
                 let name = text(&info.name);
@@ -116,6 +125,34 @@ impl MdropGui {
             }
         }
     }
+
+    fn subscription(&self) -> Subscription<Message> {
+        Subscription::run(worker).map(Message::UpdateDevice)
+    }
+
+    fn theme(&self) -> Theme {
+        Theme::CatppuccinMocha
+    }
+}
+
+fn worker() -> impl Stream<Item = Option<MoondropInfo>> {
+    stream::channel(
+        1,
+        async move |mut output: mpsc::Sender<Option<MoondropInfo>>| {
+            let mut moondrop = Moondrop::new();
+            let (tx, rx) = std::sync::mpsc::channel();
+
+            std::thread::spawn(move || {
+                moondrop.watch(tx);
+            });
+
+            loop {
+                let data = rx.recv().unwrap();
+                output.send(None).await.expect("dummy send");
+                output.send(data).await.expect("failed to send data");
+            }
+        },
+    )
 }
 
 impl Default for MdropGui {

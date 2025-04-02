@@ -10,4 +10,3 @@ clap.workspace = true
 futures-lite.workspace = true
 nusb.workspace = true
 tabled.workspace = true
-usb-ids.workspace = true

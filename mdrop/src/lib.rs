@@ -1,6 +1,9 @@
 use std::collections::HashMap;
+use std::hash::Hash;
+use std::sync::mpsc;
 
 use futures_lite::future;
+use nusb::hotplug::HotplugEvent;
 use nusb::transfer::{ControlIn, ControlOut};
 use nusb::{DeviceId, DeviceInfo};
 use tabled::Tabled;
@@ -36,24 +39,48 @@ const FILTER_IDX: usize = 3;
 const GAIN_IDX: usize = 4;
 const INDICATOR_STATE_IDX: usize = 5;
 
+#[derive(Clone, Debug)]
 pub struct Moondrop {
-    devices: HashMap<DeviceId, DeviceInfo>,
+    pub devices: HashMap<DeviceId, DeviceInfo>,
     single: Option<DeviceId>,
 }
 
 impl Moondrop {
     pub fn new() -> Self {
-        let devices: HashMap<DeviceId, DeviceInfo> = nusb::list_devices()
-            .unwrap()
-            .filter(|d| d.vendor_id() == MOONDROP_VID)
-            .map(|d| (d.id(), d))
-            .collect();
+        let devices = Self::refresh();
         let single = if devices.len() == 1 {
             devices.keys().next().cloned()
         } else {
             None
         };
         Self { devices, single }
+    }
+
+    pub fn watch(&mut self, tx: mpsc::Sender<Option<MoondropInfo>>) {
+        let watch = nusb::watch_devices().unwrap();
+        for event in futures_lite::stream::block_on(watch) {
+            match event {
+                HotplugEvent::Connected(di) => {
+                    if di.vendor_id() == MOONDROP_VID {
+                        self.single = Some(di.id());
+                        self.devices.insert(di.id(), di);
+                        tx.send(self.get_all()).expect("connect: send failed");
+                        println!("devices: {:?}", self.devices);
+                    }
+                }
+                HotplugEvent::Disconnected(device_id) => {
+                    println!("Disconnect: {:?}", device_id);
+                    if let Some(s) = self.single {
+                        if device_id == s {
+                            self.single = None;
+                            tx.send(None).expect("disconnect: send failed");
+                        }
+                    }
+                    self.devices.remove(&device_id);
+                    println!("devices: {:?}", self.devices);
+                }
+            }
+        }
     }
 
     pub fn detect(&self) -> Vec<MoondropInfo> {
@@ -115,10 +142,10 @@ impl Moondrop {
         }
 
         None
-
     }
 
-    pub fn set_gain(&self, gain: Gain) {
+    pub fn set_gain(&mut self, gain: Gain) {
+        self.devices = Self::refresh();
         let mut cmd = Vec::from(SET_GAIN);
         cmd.push(gain as u8);
         println!("Gain Command: {:?}", cmd);
@@ -127,7 +154,8 @@ impl Moondrop {
         });
     }
 
-    pub fn set_volume(&self, level: Volume) {
+    pub fn set_volume(&mut self, level: Volume) {
+        self.devices = Self::refresh();
         let value = level.to_payload();
         println!("Volume Level: {level} clamped: {value}");
         let mut cmd = Vec::from(SET_VOLUME);
@@ -139,7 +167,8 @@ impl Moondrop {
         });
     }
 
-    pub fn set_filter(&self, filter: Filter) {
+    pub fn set_filter(&mut self, filter: Filter) {
+        self.devices = Self::refresh();
         let mut cmd = Vec::from(SET_FILTER);
         cmd.push(filter as u8);
         println!("Filter Command: {:?}", cmd);
@@ -148,7 +177,8 @@ impl Moondrop {
         });
     }
 
-    pub fn set_indicator_state(&self, indicator_state: IndicatorState) {
+    pub fn set_indicator_state(&mut self, indicator_state: IndicatorState) {
+        self.devices = Self::refresh();
         let mut cmd = Vec::from(SET_INDICATOR_STATE);
         cmd.push(indicator_state as u8);
         println!("IndicatorState Command: {:?}", cmd);
@@ -194,6 +224,14 @@ impl Moondrop {
         .into_result()
         .expect("write failed");
     }
+
+    fn refresh() -> HashMap<DeviceId, DeviceInfo> {
+        nusb::list_devices()
+            .unwrap()
+            .filter(|d| d.vendor_id() == MOONDROP_VID)
+            .map(|d| (d.id(), d))
+            .collect()
+    }
 }
 
 impl Default for Moondrop {
@@ -202,7 +240,13 @@ impl Default for Moondrop {
     }
 }
 
-#[derive(Tabled)]
+impl Hash for Moondrop {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.single.hash(state);
+    }
+}
+
+#[derive(Clone, Debug, Tabled)]
 #[tabled(rename_all = "snake")]
 pub struct MoondropInfo {
     pub name: String,

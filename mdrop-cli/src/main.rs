@@ -70,7 +70,7 @@ fn main() {
     let args = Cli::parse();
     println!("Device: {:?}", args.device);
 
-    let moondrop = Moondrop::new();
+    let mut moondrop = Moondrop::new();
 
     match args.command {
         Commands::Get(get) => {
