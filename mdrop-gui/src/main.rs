@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use iced::futures::channel::mpsc;
 use iced::futures::{SinkExt, Stream};
 use iced::widget::{column, container, pick_list, slider, svg, text};
@@ -13,6 +11,8 @@ use mdrop::{Moondrop, MoondropInfo};
 const WIDTH: u32 = 300;
 
 pub fn main() -> iced::Result {
+    env_logger::init();
+
     iced::application("mdrop", MdropGui::update, MdropGui::view)
         .window(iced::window::Settings {
             size: Size::new(300.0, 300.0),
@@ -71,7 +71,7 @@ impl MdropGui {
                 }
             }
             Message::UpdateDevice(moondrop_info) => {
-                println!("app update: {:?}", moondrop_info);
+                log::debug!("app update: {:?}", moondrop_info);
                 self.info = moondrop_info;
             }
         }

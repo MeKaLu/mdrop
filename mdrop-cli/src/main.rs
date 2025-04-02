@@ -67,8 +67,10 @@ enum SetCommands {
 }
 
 fn main() {
+    env_logger::init();
+
     let args = Cli::parse();
-    println!("Device: {:?}", args.device);
+    log::debug!("Device: {:?}", args.device);
 
     let mut moondrop = Moondrop::new();
 

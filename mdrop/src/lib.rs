@@ -65,11 +65,11 @@ impl Moondrop {
                         self.single = Some(di.id());
                         self.devices.insert(di.id(), di);
                         tx.send(self.get_all()).expect("connect: send failed");
-                        println!("devices: {:?}", self.devices);
+                        log::debug!("devices: {:?}", self.devices);
                     }
                 }
                 HotplugEvent::Disconnected(device_id) => {
-                    println!("Disconnect: {:?}", device_id);
+                    log::debug!("Disconnect: {:?}", device_id);
                     if let Some(s) = self.single {
                         if device_id == s {
                             self.single = None;
@@ -77,7 +77,7 @@ impl Moondrop {
                         }
                     }
                     self.devices.remove(&device_id);
-                    println!("devices: {:?}", self.devices);
+                    log::debug!("devices: {:?}", self.devices);
                 }
             }
         }
@@ -148,7 +148,7 @@ impl Moondrop {
         self.devices = Self::refresh();
         let mut cmd = Vec::from(SET_GAIN);
         cmd.push(gain as u8);
-        println!("Gain Command: {:?}", cmd);
+        log::debug!("Gain Command: {:?}", cmd);
         self.devices.iter().for_each(|(_, di)| {
             Self::write(di, &cmd);
         });
@@ -157,11 +157,11 @@ impl Moondrop {
     pub fn set_volume(&mut self, level: Volume) {
         self.devices = Self::refresh();
         let value = level.to_payload();
-        println!("Volume Level: {level} clamped: {value}");
+        log::debug!("Volume Level: {level} clamped: {value}");
         let mut cmd = Vec::from(SET_VOLUME);
         // FIXME: might be incorrect
         cmd.push(value);
-        println!("Volume Command: {:?}", cmd);
+        log::debug!("Volume Command: {:?}", cmd);
         self.devices.iter().for_each(|(_, di)| {
             Self::write(di, &cmd);
         });
@@ -171,7 +171,7 @@ impl Moondrop {
         self.devices = Self::refresh();
         let mut cmd = Vec::from(SET_FILTER);
         cmd.push(filter as u8);
-        println!("Filter Command: {:?}", cmd);
+        log::debug!("Filter Command: {:?}", cmd);
         self.devices.iter().for_each(|(_, di)| {
             Self::write(di, &cmd);
         });
@@ -181,7 +181,7 @@ impl Moondrop {
         self.devices = Self::refresh();
         let mut cmd = Vec::from(SET_INDICATOR_STATE);
         cmd.push(indicator_state as u8);
-        println!("IndicatorState Command: {:?}", cmd);
+        log::debug!("IndicatorState Command: {:?}", cmd);
         self.devices.iter().for_each(|(_, di)| {
             Self::write(di, &cmd);
         });
