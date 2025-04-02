@@ -2073,7 +2073,7 @@ dependencies = [
 
 [[package]]
 name = "mdrop"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "env_logger",
@@ -2085,7 +2085,7 @@ dependencies = [
 
 [[package]]
 name = "mdrop-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "env_logger",
@@ -2098,7 +2098,7 @@ dependencies = [
 
 [[package]]
 name = "mdrop-gui"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "env_logger",
  "iced",
