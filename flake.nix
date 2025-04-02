@@ -67,6 +67,12 @@
         };
       gui = let
         cargoToml = builtins.fromTOML (builtins.readFile ./mdrop-gui/Cargo.toml);
+        libPath = with pkgs;
+          lib.makeLibraryPath [
+            libGL
+            libxkbcommon
+            wayland
+          ];
       in
         pkgs.rustPlatform.buildRustPackage {
           inherit (cargoToml.package) name version;
@@ -84,6 +90,12 @@
             "--bin"
             "mdrop-gui"
           ];
+
+          nativeBuildInputs = [pkgs.makeWrapper];
+
+          postInstall = ''
+            wrapProgram $out/bin/mdrop-gui --prefix LD_LIBRARY_PATH : ${libPath}
+          '';
 
           meta = with pkgs.lib; {
             description = "Linux CLI tool for controlling Moondrop USB audio dongles.";
