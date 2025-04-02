@@ -116,7 +116,7 @@ impl MdropGui {
                     .style(|theme: &Theme, _| svg::Style {
                         color: Some(theme.palette().text),
                     });
-                let text = text("No Moondrop dongle detected.\nPlease attach dongle").center();
+                let text = text("No Moondrop dongle detected.\nPlease attach dongle.").center();
                 column![svg, text,]
                     .width(Fill)
                     .align_x(Center)

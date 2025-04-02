@@ -1,6 +1,6 @@
 # mdrop CLI tool
 
-Linux CLI tool for controlling Moondrop USB audio dongles.
+Linux/MacOS CLI tool for controlling Moondrop USB audio dongles.
 
 ## Usage
 
@@ -24,11 +24,9 @@ Options:
 
 ```sh
 $ mdrop devices
-┌───────────────────┬───────┬────────┐
-│ Name              │ Bus   │ Volume │
-├───────────────────┼───────┼────────┤
-│ Moondrop Dawn Pro │ 03:07 │    66% │
-└───────────────────┴───────┴────────┘
+┌───────name────────┬──bus──┬volume┬───────────filter───────────┬─gain─┬indicator_state┐
+│ MOONDROP Dawn Pro │ 03:28 │ 81%  │ Fast roll-off, low-latency │ High │ Disabled      │
+└───────────────────┴───────┴──────┴────────────────────────────┴──────┴───────────────┘
 ```
 
 ## Supported devices
@@ -49,15 +47,15 @@ SUBSYSTEM=="usb", ATTRS{idVendor}=="2fc6", MODE="0666"
 
 ### Nix
 
-TBD(no package currently present):
-
 ```sh
+# cli
 nix run github:frahz/mdrop
+
+# gui
+nix run github:frahz/mdrop#gui
 ```
 
 ## TODO List
 
 - Add option to specify device to configure using `bus` and `address` number (because Moondrop doesn't give unique serial ids to the dongles)
-- Make some command output look nicer (`get volume` and `get`)
-- Use `Result` for error handling cases when device is not connected, so that we don't show some output
-- Better error handling instead of `unwrap`ing everything.
+- change the code to only support single device (most people won't have two Moondrop devices connected at the same time)
