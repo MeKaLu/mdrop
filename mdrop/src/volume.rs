@@ -12,8 +12,9 @@ impl Volume {
         Self(level)
     }
     pub fn to_payload(&self) -> u8 {
-        let v = (VOLUME_MIN as u32 - self.0 * VOLUME_MIN as u32 / 100) as u8 - 1;
-        v.clamp(VOLUME_MAX, VOLUME_MIN)
+        let level = self.0.min(100);
+        let v = VOLUME_MIN as u32 - (level * VOLUME_MIN as u32).div_ceil(100);
+        (v as u8).clamp(VOLUME_MAX, VOLUME_MIN)
     }
 
     pub fn from_payload(value: u8) -> Self {
