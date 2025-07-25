@@ -46,7 +46,6 @@
           default = pkgs.mkShell {
             buildInputs = [
               pkgs.rust-bin.stable.latest.default
-              pkgs.alejandra
             ];
 
             LD_LIBRARY_PATH = libPath;
